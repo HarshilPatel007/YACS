@@ -1,0 +1,17 @@
+env
+.env
+env/
+.env/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
