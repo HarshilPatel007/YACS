@@ -1,3 +1,4 @@
+VERSION = "0.2 Alpha"
 SQUARE_SIZE = 70
 THEME_COLORS = {
     "dark_square": "#769656",

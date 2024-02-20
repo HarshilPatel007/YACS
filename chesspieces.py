@@ -1,5 +1,5 @@
-import vars as vars
-import chess as chess
+import vars
+import chess
 from PySide6 import QtCore, QtGui, QtSvg, QtSvgWidgets, QtWidgets
 
 class ChessPieces:
@@ -51,3 +51,9 @@ class ChessPieces:
                 self.scene.addItem(piece_item)
 
                 square += 1
+
+    def delete_pieces(self):
+        items = self.scene.items()
+        for item in items:
+            if isinstance(item, QtWidgets.QGraphicsPixmapItem):
+                self.scene.removeItem(item)
