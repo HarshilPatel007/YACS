@@ -1,6 +1,8 @@
-import vars
 import chess
 from PySide6 import QtCore, QtGui, QtSvg, QtSvgWidgets, QtWidgets
+
+import vars
+
 
 class ChessPieces:
 
@@ -57,3 +59,35 @@ class ChessPieces:
         for item in items:
             if isinstance(item, QtWidgets.QGraphicsPixmapItem):
                 self.scene.removeItem(item)
+
+    def delete_piece(self, square):
+        items = self.scene.items()
+        for item in items:
+            if isinstance(
+                item, QtWidgets.QGraphicsPixmapItem
+            ) and item.pos() == QtCore.QPointF(
+                square[0] * vars.SQUARE_SIZE + 5, square[1] * vars.SQUARE_SIZE + 5
+            ):
+                self.scene.removeItem(item)
+
+    def draw_moved_piece(self, piece_name, piece_color, destination_square):
+        x = destination_square[0] * vars.SQUARE_SIZE + 5
+        y = destination_square[1] * vars.SQUARE_SIZE + 5
+
+        piece_item = QtWidgets.QGraphicsPixmapItem(
+            self.piece_images[(piece_color, piece_name)]
+        )
+        piece_item.setPos(x, y)
+        self.scene.addItem(piece_item)
+        captured_pawn_square = (
+                destination_square[0],
+                destination_square[1] + 1 if piece_color == "w" else destination_square[1] - 1
+            )
+
+        # Check if the move is an en-passant capture
+        if self.chessboard.move_manager.is_ep:
+            print(
+                f"{self.chessboard.move_manager.is_ep} -{destination_square} - {captured_pawn_square}"
+            )
+            self.chessboard.move_manager.is_ep = False
+            self.delete_piece(captured_pawn_square)

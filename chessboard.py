@@ -42,6 +42,37 @@ class ChessBoard:
             return chess.square(7 - col, row)
         return chess.square(col, 7 - row)
 
+    def get_source_square_from_move(self, move):
+        """
+        returns a square where piece is moved from
+        """
+        if self.is_board_flipped:
+            return (
+                7 - chess.square_file(move.from_square),
+                chess.square_rank(move.from_square),
+            )
+        return chess.square_file(move.from_square), 7 - chess.square_rank(
+            move.from_square
+        )
+
+    def get_destination_square_from_move(self, move):
+        """
+        returns a square where piece is moved to
+        """
+        if self.is_board_flipped:
+            return (
+                7 - chess.square_file(move.to_square),
+                chess.square_rank(move.to_square),
+            )
+        return chess.square_file(move.to_square), 7 - chess.square_rank(move.to_square)
+
+    def get_selected_piece_color_and_name(self, selected_square):
+        piece = self.board.piece_at(selected_square)
+        if piece is not None:
+            piece_color = "w" if piece.color == chess.WHITE else "b"
+            piece_name = piece.symbol().upper()
+            return piece_color, piece_name
+
 
 class ChessBoardEvents:
     def __init__(self, chessboard):
@@ -50,7 +81,6 @@ class ChessBoardEvents:
     def mousePress(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
             square_number = self.chessboard.get_selected_square_number(event)
-
             if self.chessboard.move_manager.selected_square is None:
                 self.chessboard.move_manager.selected_square = square_number
             else:
@@ -61,8 +91,20 @@ class ChessBoardEvents:
                 self.chessboard.move_manager.move_piece(square_number)
                 if self.chessboard.move_manager.is_piece_moved is True:
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.chess_pieces.delete_pieces()
-                    self.chessboard.chess_pieces.draw_pieces()
+                    last_move = self.chessboard.board.move_stack[-1]
+                    source_square = self.chessboard.get_source_square_from_move(
+                        last_move
+                    )
+                    destination_square = (
+                        self.chessboard.get_destination_square_from_move(last_move)
+                    )
+                    pc, pn = self.chessboard.get_selected_piece_color_and_name(
+                        square_number
+                    )
+                    self.chessboard.chess_pieces.delete_piece(source_square)
+                    self.chessboard.chess_pieces.draw_moved_piece(
+                        pn, pc, destination_square
+                    )
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):

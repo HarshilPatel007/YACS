@@ -1,5 +1,6 @@
 import chess
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore
+import vars
 
 
 class MoveManager:
@@ -8,6 +9,7 @@ class MoveManager:
         self.chessboard = chessboard
         self.selected_square = None
         self.is_piece_moved = False
+        self.is_ep = False
 
     def move_piece(self, target_square):
         if self.selected_square is not None:
@@ -18,7 +20,8 @@ class MoveManager:
                 ):
                     if self._is_pawn_promotion(target_square):
                         self._show_pawn_promotion_dialog(move)
-
+                    if self.chessboard.board.is_en_passant(move):
+                        self.is_ep = True
                     self.chessboard.board.push(move)
                     self.is_piece_moved = True
                     break
@@ -43,6 +46,9 @@ class MoveManager:
     def _show_pawn_promotion_dialog(self, move):
         pawn_promotion = PawnPromotion(self.chessboard)
         pawn_promotion.pawn_promotion_dialog(move)
+
+    def get_last_move(self):
+        return self.chessboard.board.peek()
 
 
 class PawnPromotion:
