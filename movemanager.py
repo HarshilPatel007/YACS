@@ -10,6 +10,7 @@ class MoveManager:
         self.selected_square = None
         self.is_piece_moved = False
         self.is_ep = False
+        self.is_kingside_castling = False
 
     def move_piece(self, target_square):
         if self.selected_square is not None:
@@ -22,6 +23,8 @@ class MoveManager:
                         self._show_pawn_promotion_dialog(move)
                     if self.chessboard.board.is_en_passant(move):
                         self.is_ep = True
+                    if self.chessboard.board.is_kingside_castling(move):
+                        self.is_kingside_castling = True
                     self.chessboard.board.push(move)
                     self.is_piece_moved = True
                     break
@@ -49,6 +52,13 @@ class MoveManager:
 
     def get_last_move(self):
         return self.chessboard.board.peek()
+
+    def get_legal_moves(self, square):
+        moves = []
+        for move in self.chessboard.board.legal_moves:
+            if move.from_square == square:
+                moves.append(move)
+        return moves
 
 
 class PawnPromotion:

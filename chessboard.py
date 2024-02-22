@@ -67,11 +67,49 @@ class ChessBoard:
         return chess.square_file(move.to_square), 7 - chess.square_rank(move.to_square)
 
     def get_selected_piece_color_and_name(self, selected_square):
+        """
+        returns the color and name of the piece at the selected square
+        """
         piece = self.board.piece_at(selected_square)
-        if piece is not None:
+        if piece:
             piece_color = "w" if piece.color == chess.WHITE else "b"
             piece_name = piece.symbol().upper()
             return piece_color, piece_name
+        return None, None
+
+    def get_board_turn(self):
+        """
+        returns which player's turn to play
+        """
+        return "w" if self.board.turn == chess.WHITE else "b"
+
+    def highlight_legal_moves(self, scene, square):
+        """
+        highlights the legal moves of a selected piece
+        """
+        legal_moves = self.move_manager.get_legal_moves(square)
+
+        for target_square in set(move.to_square for move in legal_moves):
+            col, row, x, y = self.get_square_coordinates(target_square)
+
+            # Add a circle in the center of the square
+            circle = scene.addEllipse(
+                x + vars.SQUARE_SIZE / 3,
+                y + vars.SQUARE_SIZE / 3,
+                vars.SQUARE_SIZE / 3,
+                vars.SQUARE_SIZE / 3,
+            )
+            circle.setPen(QtCore.Qt.NoPen)
+            circle.setBrush(QtGui.QColor(vars.THEME_COLORS["highlight_legal_moves"]))
+            circle.setOpacity(0.45)
+
+    def delete_highlighted_legal_moves(self, scene):
+        items = scene.items()
+        for item in items:
+            if isinstance(item, QtWidgets.QGraphicsEllipseItem):
+                brush_color = item.brush().color()
+                if brush_color == QtGui.QColor(vars.THEME_COLORS["highlight_legal_moves"]):
+                    scene.removeItem(item)
 
 
 class ChessBoardEvents:
@@ -79,32 +117,39 @@ class ChessBoardEvents:
         self.chessboard = chessboard
 
     def mousePress(self, event):
+        square_number = self.chessboard.get_selected_square_number(event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            square_number = self.chessboard.get_selected_square_number(event)
             if self.chessboard.move_manager.selected_square is None:
                 self.chessboard.move_manager.selected_square = square_number
+                self.chessboard.highlight_legal_moves(
+                    self.chessboard.scene, self.chessboard.move_manager.selected_square
+                )
             else:
                 if square_number == self.chessboard.move_manager.selected_square:
                     self.chessboard.move_manager.selected_square = None
+                    self.chessboard.delete_highlighted_legal_moves(self.chessboard.scene)
                     return
 
                 self.chessboard.move_manager.move_piece(square_number)
+
                 if self.chessboard.move_manager.is_piece_moved is True:
-                    self.chessboard.move_manager.selected_square = None
-                    last_move = self.chessboard.board.move_stack[-1]
+                    piece_color, piece_name = self.chessboard.get_selected_piece_color_and_name(
+                        square_number
+                    )
+                    last_move = self.chessboard.move_manager.get_last_move()
                     source_square = self.chessboard.get_source_square_from_move(
                         last_move
                     )
                     destination_square = (
                         self.chessboard.get_destination_square_from_move(last_move)
                     )
-                    pc, pn = self.chessboard.get_selected_piece_color_and_name(
-                        square_number
-                    )
                     self.chessboard.chess_pieces.delete_piece(source_square)
-                    self.chessboard.chess_pieces.draw_moved_piece(
-                        pn, pc, destination_square
+                    self.chessboard.chess_pieces.draw_piece(
+                        piece_name, piece_color, destination_square
                     )
+                    self.chessboard.move_manager.is_piece_moved = False
+                    self.chessboard.move_manager.selected_square = None
+                    self.chessboard.delete_highlighted_legal_moves(self.chessboard.scene)
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
@@ -113,9 +158,8 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
-        self.chess_pieces = ChessPieces(
-            self, self.is_board_flipped, self.scene, "cardinal"
-        )
+        self.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
+        self.chess_pieces = ChessPieces(self, self.scene, "cardinal")
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
         self.events = ChessBoardEvents(self)

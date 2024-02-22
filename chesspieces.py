@@ -6,9 +6,8 @@ import vars
 
 class ChessPieces:
 
-    def __init__(self, chessboard, is_chessboard_flipped, scene, piece_set="staunty"):
+    def __init__(self, chessboard, scene, piece_set="staunty"):
         self.chessboard = chessboard
-        self.is_chessboard_flipped = is_chessboard_flipped
         self.scene = scene
         self.piece_images = {}
         self.piece_set = piece_set
@@ -39,7 +38,7 @@ class ChessPieces:
                 piece_name = char.upper()
                 piece_color = "w" if char.isupper() else "b"
 
-                if self.is_chessboard_flipped:
+                if self.chessboard.is_board_flipped:
                     x = (7 - square % 8) * vars.SQUARE_SIZE + 5
                     y = (7 - square // 8) * vars.SQUARE_SIZE + 5
                 else:
@@ -62,32 +61,40 @@ class ChessPieces:
 
     def delete_piece(self, square):
         items = self.scene.items()
+        x = square[0] * vars.SQUARE_SIZE + 5
+        y = square[1] * vars.SQUARE_SIZE + 5
         for item in items:
             if isinstance(
                 item, QtWidgets.QGraphicsPixmapItem
-            ) and item.pos() == QtCore.QPointF(
-                square[0] * vars.SQUARE_SIZE + 5, square[1] * vars.SQUARE_SIZE + 5
-            ):
+            ) and item.pos() == QtCore.QPointF(x, y):
                 self.scene.removeItem(item)
 
-    def draw_moved_piece(self, piece_name, piece_color, destination_square):
+    def draw_piece(self, piece_name, piece_color, destination_square):
         x = destination_square[0] * vars.SQUARE_SIZE + 5
         y = destination_square[1] * vars.SQUARE_SIZE + 5
+
+        # delete opponent's piece from the scene at the destination square
+        self.delete_piece(destination_square)
 
         piece_item = QtWidgets.QGraphicsPixmapItem(
             self.piece_images[(piece_color, piece_name)]
         )
         piece_item.setPos(x, y)
         self.scene.addItem(piece_item)
-        captured_pawn_square = (
-                destination_square[0],
-                destination_square[1] + 1 if piece_color == "w" else destination_square[1] - 1
-            )
+        ep_pawn_square = (
+            destination_square[0],
+            (
+                destination_square[1] + 1
+                if piece_color == "w"
+                else destination_square[1] - 1
+            ),
+        )
 
         # Check if the move is an en-passant capture
         if self.chessboard.move_manager.is_ep:
             print(
-                f"{self.chessboard.move_manager.is_ep} -{destination_square} - {captured_pawn_square}"
+                f"{self.chessboard.move_manager.is_ep} -{destination_square} - {ep_pawn_square}"
             )
             self.chessboard.move_manager.is_ep = False
-            self.delete_piece(captured_pawn_square)
+            # delete opponent's pawn from the scene at the square
+            self.delete_piece(ep_pawn_square)
