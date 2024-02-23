@@ -9,8 +9,10 @@ class MoveManager:
         self.chessboard = chessboard
         self.selected_square = None
         self.is_piece_moved = False
+        self.is_capture = False
         self.is_ep = False
         self.is_kingside_castling = False
+        self.is_queenside_castling = False
 
     def move_piece(self, target_square):
         if self.selected_square is not None:
@@ -21,10 +23,14 @@ class MoveManager:
                 ):
                     if self._is_pawn_promotion(target_square):
                         self._show_pawn_promotion_dialog(move)
+                    if self.chessboard.board.is_capture(move):
+                        self.is_capture = True
                     if self.chessboard.board.is_en_passant(move):
                         self.is_ep = True
                     if self.chessboard.board.is_kingside_castling(move):
                         self.is_kingside_castling = True
+                    if self.chessboard.board.is_queenside_castling(move):
+                        self.is_queenside_castling = True
                     self.chessboard.board.push(move)
                     self.is_piece_moved = True
                     break
