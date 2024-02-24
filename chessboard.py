@@ -20,7 +20,7 @@ class ChessBoard:
 
     def get_pieces_squares(self, piece_name, piece_color):
         """
-        returns the list of squares coordinates where the given pieces are.
+        returns the list of squares coordinates of the given piece name & color
         get_pieces_squares(chess.ROOK, chess.WHITE) => [(0, 7), (7, 7)]
         """
         squares = []
@@ -36,17 +36,17 @@ class ChessBoard:
 
         return squares
 
-    def get_square_coordinates(self, square):
+    def get_square_coordinates(self, square_number):
         """
         returns the coordinates of given square number
         col, row, x, y = self.get_square_coordinates(20)
         """
         if self.is_board_flipped:
-            col = 7 - chess.square_file(square)
-            row = chess.square_rank(square)
+            col = 7 - chess.square_file(square_number)
+            row = chess.square_rank(square_number)
         else:
-            col = chess.square_file(square)
-            row = 7 - chess.square_rank(square)
+            col = chess.square_file(square_number)
+            row = 7 - chess.square_rank(square_number)
         return col, row, col * vars.SQUARE_SIZE, row * vars.SQUARE_SIZE
 
     def get_selected_square_number(self, event):
@@ -63,7 +63,9 @@ class ChessBoard:
 
     def get_source_square_from_move(self, move):
         """
-        returns a square where piece is moved from
+        returns a square coordinates where piece is moved from
+        source_square = get_source_square_from_move(e2e4)
+        => (4, 6)
         """
         if self.is_board_flipped:
             return (
@@ -76,7 +78,9 @@ class ChessBoard:
 
     def get_destination_square_from_move(self, move):
         """
-        returns a square where piece is moved to
+        returns a square coordinates where piece is moved to
+        destination_square = get_destination_square_from_move(e2e4)
+        => (4, 4)
         """
         if self.is_board_flipped:
             return (
@@ -85,11 +89,11 @@ class ChessBoard:
             )
         return chess.square_file(move.to_square), 7 - chess.square_rank(move.to_square)
 
-    def get_selected_piece_color_and_name(self, selected_square):
+    def get_selected_piece_color_and_name(self, square_number):
         """
         returns the color and name of the piece at the selected square
         """
-        piece = self.board.piece_at(selected_square)
+        piece = self.board.piece_at(square_number)
         if piece:
             piece_color = "w" if piece.color == chess.WHITE else "b"
             piece_name = piece.symbol().upper()
@@ -102,11 +106,11 @@ class ChessBoard:
         """
         return "w" if self.board.turn == chess.WHITE else "b"
 
-    def highlight_legal_moves(self, scene, square):
+    def highlight_legal_moves(self, scene, square_number):
         """
-        highlights the legal moves of a selected piece
+        highlights the legal moves of a selected piece/square
         """
-        legal_moves = self.move_manager.get_legal_moves(square)
+        legal_moves = self.move_manager.get_legal_moves(square_number)
 
         for target_square in set(move.to_square for move in legal_moves):
             col, row, x, y = self.get_square_coordinates(target_square)
