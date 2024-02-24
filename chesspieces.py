@@ -77,7 +77,10 @@ class ChessPieces:
             x = 0
             for char in row:
                 if char in piece_name:
-                    piece_positions.append((x, y))
+                    if self.chessboard.is_board_flipped:
+                        piece_positions.append((7 - x, 7 - y))
+                    else:
+                        piece_positions.append((x, y))
                 if char.isdigit():
                     x += int(char)
                 else:
@@ -100,16 +103,33 @@ class ChessPieces:
         piece_item.setPos(x, y)
         self.scene.addItem(piece_item)
 
-        # [(0, 7), (7, 7)] before
-        # [(0, 7), (5, 7)] after
         white_rooks_positions = self.chessboard.get_pieces_squares(
             chess.ROOK, chess.WHITE
         )
         black_rooks_positions = self.chessboard.get_pieces_squares(
             chess.ROOK, chess.BLACK
         )
-        print(white_rooks_positions)
-        print(black_rooks_positions)
+        white_king_position = self.chessboard.get_pieces_squares(
+            chess.KING, chess.WHITE
+        )
+        black_king_position = self.chessboard.get_pieces_squares(
+            chess.KING, chess.BLACK
+        )
+
+        white_rooks_positions_before_castling = self.get_piece_position(
+            ["R"], self.chessboard.starting_board_position_fen
+        )
+        black_rooks_positions_before_castling = self.get_piece_position(
+            ["r"], self.chessboard.starting_board_position_fen
+        )
+
+        white_king_positions_before_castling = self.get_piece_position(
+            ["K"], self.chessboard.starting_board_position_fen
+        )
+        black_king_positions_before_castling = self.get_piece_position(
+            ["k"], self.chessboard.starting_board_position_fen
+        )
+
         ep_pawn_square = (
             destination_square[0],
             (
@@ -139,10 +159,10 @@ class ChessPieces:
 
             piece_item.setPos(x, y)
             self.scene.addItem(piece_item)
-            # if piece_color == "w":
-            #     self.delete_piece(white_rooks_positions[1])
-            # if piece_color == "b":
-            #     self.delete_piece(black_rooks_positions[1])
+            if piece_color == "w":
+                self.delete_piece(white_rooks_positions_before_castling[1])
+            if piece_color == "b":
+                self.delete_piece(black_rooks_positions_before_castling[1])
             self.chessboard.move_manager.is_kingside_castling = False
 
         # check if the move is queenside castling
@@ -158,8 +178,8 @@ class ChessPieces:
                 y = black_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
             piece_item.setPos(x, y)
             self.scene.addItem(piece_item)
-            # if piece_color == "w":
-            #     self.delete_piece(white_rooks_positions[0])
-            # if piece_color == "b":
-            #     self.delete_piece(black_rooks_positions[0])
+            if piece_color == "w":
+                self.delete_piece(white_rooks_positions_before_castling[0])
+            if piece_color == "b":
+                self.delete_piece(black_rooks_positions_before_castling[0])
             self.chessboard.move_manager.is_queenside_castling = False

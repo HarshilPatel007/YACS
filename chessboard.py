@@ -12,8 +12,9 @@ class ChessBoard:
     def __init__(self):
         self.fischer_random = False
         self.board = chess.Board(chess960=self.fischer_random)
-        self.is_board_flipped = False
+        self.is_board_flipped = True
         self.move_manager = MoveManager(self)
+        self.starting_board_position_fen = None
 
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
@@ -258,6 +259,9 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         if self.show_labels:
             self.draw_labels()
         self.chess_pieces.draw_pieces()
+        self.starting_board_position_fen = (
+            self.board.fen().split()[0]
+        )  # hack to get the fen of only starting position
 
     def mousePressEvent(self, event):
         self.events.mousePress(event)
