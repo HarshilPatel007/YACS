@@ -69,6 +69,22 @@ class ChessPieces:
             ) and item.pos() == QtCore.QPointF(x, y):
                 self.scene.removeItem(item)
 
+    def get_piece_position(self, piece_name, fen):
+        rows = fen.split("/")
+
+        piece_positions = []
+        for y, row in enumerate(rows):
+            x = 0
+            for char in row:
+                if char in piece_name:
+                    piece_positions.append((x, y))
+                if char.isdigit():
+                    x += int(char)
+                else:
+                    x += 1
+
+        return piece_positions
+
     def draw_piece(self, piece_name, piece_color, destination_square):
         x = destination_square[0] * vars.SQUARE_SIZE + 5
         y = destination_square[1] * vars.SQUARE_SIZE + 5
@@ -84,6 +100,16 @@ class ChessPieces:
         piece_item.setPos(x, y)
         self.scene.addItem(piece_item)
 
+        # [(0, 7), (7, 7)] before
+        # [(0, 7), (5, 7)] after
+        white_rooks_positions = self.chessboard.get_pieces_squares(
+            chess.ROOK, chess.WHITE
+        )
+        black_rooks_positions = self.chessboard.get_pieces_squares(
+            chess.ROOK, chess.BLACK
+        )
+        print(white_rooks_positions)
+        print(black_rooks_positions)
         ep_pawn_square = (
             destination_square[0],
             (
@@ -99,50 +125,41 @@ class ChessPieces:
             self.delete_piece(ep_pawn_square)
             self.chessboard.move_manager.is_ep = False
 
-        kingside_castling_rook_before = (
-            destination_square[0] + 1,
-            destination_square[1],
-        )
-        kingside_castling_rook_after = (
-            destination_square[0] - 1,
-            destination_square[1],
-        )
-
-        queenside_castling_rook_before = (
-            destination_square[0] - 2,
-            destination_square[1],
-        )
-        queenside_castling_rook_after = (
-            destination_square[0] + 1,
-            destination_square[1],
-        )
-
         # check if the move is kingside castling
         if self.chessboard.move_manager.is_kingside_castling == True:
             piece_item = QtWidgets.QGraphicsPixmapItem(
-                self.piece_images[
-                    ("w" if piece_color == "w" else "b", "R")
-                ]
+                self.piece_images[("w" if piece_color == "w" else "b", "R")]
             )
-            piece_item.setPos(
-                kingside_castling_rook_after[0] * vars.SQUARE_SIZE + 5,
-                kingside_castling_rook_after[1] * vars.SQUARE_SIZE + 5,
-            )
+            if piece_color == "w":
+                x = white_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
+                y = white_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
+            if piece_color == "b":
+                x = black_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
+                y = black_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
+
+            piece_item.setPos(x, y)
             self.scene.addItem(piece_item)
-            self.delete_piece(kingside_castling_rook_before)
+            # if piece_color == "w":
+            #     self.delete_piece(white_rooks_positions[1])
+            # if piece_color == "b":
+            #     self.delete_piece(black_rooks_positions[1])
             self.chessboard.move_manager.is_kingside_castling = False
 
         # check if the move is queenside castling
         if self.chessboard.move_manager.is_queenside_castling == True:
             piece_item = QtWidgets.QGraphicsPixmapItem(
-                self.piece_images[
-                    ("w" if piece_color == "w" else "b", "R")
-                ]
+                self.piece_images[("w" if piece_color == "w" else "b", "R")]
             )
-            piece_item.setPos(
-                queenside_castling_rook_after[0] * vars.SQUARE_SIZE + 5,
-                queenside_castling_rook_after[1] * vars.SQUARE_SIZE + 5,
-            )
+            if piece_color == "w":
+                x = white_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
+                y = white_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
+            if piece_color == "b":
+                x = black_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
+                y = black_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
+            piece_item.setPos(x, y)
             self.scene.addItem(piece_item)
-            self.delete_piece(queenside_castling_rook_before)
+            # if piece_color == "w":
+            #     self.delete_piece(white_rooks_positions[0])
+            # if piece_color == "b":
+            #     self.delete_piece(black_rooks_positions[0])
             self.chessboard.move_manager.is_queenside_castling = False

@@ -18,9 +18,28 @@ class ChessBoard:
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
 
+    def get_pieces_squares(self, piece_name, piece_color):
+        """
+        returns the list of squares coordinates where the given pieces are.
+        get_pieces_squares(chess.ROOK, chess.WHITE) => [(0, 7), (7, 7)]
+        """
+        squares = []
+        for square in self.board.pieces(piece_name, piece_color):
+            if self.is_board_flipped:
+                squares.append(
+                    (7 - chess.square_file(square), chess.square_rank(square))
+                )
+            else:
+                squares.append(
+                    (chess.square_file(square), 7 - chess.square_rank(square))
+                )
+
+        return squares
+
     def get_square_coordinates(self, square):
         """
-        col, row, x, y = self.get_square_coordinates(square)
+        returns the coordinates of given square number
+        col, row, x, y = self.get_square_coordinates(20)
         """
         if self.is_board_flipped:
             col = 7 - chess.square_file(square)
@@ -108,7 +127,9 @@ class ChessBoard:
         for item in items:
             if isinstance(item, QtWidgets.QGraphicsEllipseItem):
                 brush_color = item.brush().color()
-                if brush_color == QtGui.QColor(vars.THEME_COLORS["highlight_legal_moves"]):
+                if brush_color == QtGui.QColor(
+                    vars.THEME_COLORS["highlight_legal_moves"]
+                ):
                     scene.removeItem(item)
 
 
@@ -127,14 +148,16 @@ class ChessBoardEvents:
             else:
                 if square_number == self.chessboard.move_manager.selected_square:
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.delete_highlighted_legal_moves(self.chessboard.scene)
+                    self.chessboard.delete_highlighted_legal_moves(
+                        self.chessboard.scene
+                    )
                     return
 
                 self.chessboard.move_manager.move_piece(square_number)
 
                 if self.chessboard.move_manager.is_piece_moved is True:
-                    piece_color, piece_name = self.chessboard.get_selected_piece_color_and_name(
-                        square_number
+                    piece_color, piece_name = (
+                        self.chessboard.get_selected_piece_color_and_name(square_number)
                     )
                     last_move = self.chessboard.move_manager.get_last_move()
                     source_square = self.chessboard.get_source_square_from_move(
@@ -149,7 +172,9 @@ class ChessBoardEvents:
                     )
                     self.chessboard.move_manager.is_piece_moved = False
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.delete_highlighted_legal_moves(self.chessboard.scene)
+                    self.chessboard.delete_highlighted_legal_moves(
+                        self.chessboard.scene
+                    )
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
@@ -158,7 +183,9 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
-        self.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
+        self.setRenderHints(
+            QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform
+        )
         self.chess_pieces = ChessPieces(self, self.scene, "cardinal")
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
