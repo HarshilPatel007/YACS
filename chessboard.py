@@ -18,7 +18,6 @@ class ChessBoard:
 
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
-        # self.board.set_chess960_pos(665) #342
 
     def get_pieces_squares(self, piece_name, piece_color):
         """
@@ -167,14 +166,19 @@ class ChessBoardEvents:
                     # `get_selected_piece_color_and_name` method returns None if user
                     # try to click on a rook to do castling.
                     # (tested on chess960 position number 665, 342 or similar positions)
-                    if self.chessboard.fischer_random and (self.chessboard.move_manager.is_queenside_castling or self.chessboard.move_manager.is_kingside_castling):
+                    if self.chessboard.fischer_random and (
+                        self.chessboard.move_manager.is_queenside_castling
+                        or self.chessboard.move_manager.is_kingside_castling
+                    ):
                         piece_color = (
                             "b" if self.chessboard.board.turn == chess.WHITE else "w"
                         )
                         piece_name = "R"
                     else:
                         piece_color, piece_name = (
-                            self.chessboard.get_selected_piece_color_and_name(square_number)
+                            self.chessboard.get_selected_piece_color_and_name(
+                                square_number
+                            )
                         )
                     last_move = self.chessboard.move_manager.get_last_move()
                     source_square = self.chessboard.get_source_square_from_move(
@@ -186,8 +190,6 @@ class ChessBoardEvents:
 
                     self.chessboard.chess_pieces.delete_piece(source_square)
 
-                    # delete opponent's piece from the scene at the destination square
-                    # if it's a capture
                     if self.chessboard.move_manager.is_capture:
                         self.chessboard.chess_pieces.delete_piece(destination_square)
                         self.chessboard.move_manager.is_capture = False
@@ -282,9 +284,8 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
             self.draw_labels()
         self.chess_pieces.draw_pieces()
         self.starting_board_position_fen = (
-            self.board.fen().split()[0]
+            self.board.board_fen()
         )  # hack to get the fen of only starting position
-        # print(self.board.chess960_pos())
 
     def mousePressEvent(self, event):
         self.events.mousePress(event)
