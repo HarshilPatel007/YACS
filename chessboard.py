@@ -14,20 +14,40 @@ class ChessBoard:
         self.board = chess.Board(chess960=self.fischer_random)
         self.is_board_flipped = False
         self.move_manager = MoveManager(self)
+        self.starting_board_position_fen = None
 
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
 
-    def get_square_coordinates(self, square):
+    def get_pieces_squares(self, piece_name, piece_color):
         """
-        col, row, x, y = self.get_square_coordinates(square)
+        returns the list of squares coordinates of the given piece name & color
+        get_pieces_squares(chess.ROOK, chess.WHITE) => [(0, 7), (7, 7)]
+        """
+        squares = []
+        for square in self.board.pieces(piece_name, piece_color):
+            if self.is_board_flipped:
+                squares.append(
+                    (7 - chess.square_file(square), chess.square_rank(square))
+                )
+            else:
+                squares.append(
+                    (chess.square_file(square), 7 - chess.square_rank(square))
+                )
+
+        return squares
+
+    def get_square_coordinates(self, square_number):
+        """
+        returns the coordinates of given square number
+        col, row, x, y = self.get_square_coordinates(20)
         """
         if self.is_board_flipped:
-            col = 7 - chess.square_file(square)
-            row = chess.square_rank(square)
+            col = 7 - chess.square_file(square_number)
+            row = chess.square_rank(square_number)
         else:
-            col = chess.square_file(square)
-            row = 7 - chess.square_rank(square)
+            col = chess.square_file(square_number)
+            row = 7 - chess.square_rank(square_number)
         return col, row, col * vars.SQUARE_SIZE, row * vars.SQUARE_SIZE
 
     def get_selected_square_number(self, event):
@@ -42,27 +62,148 @@ class ChessBoard:
             return chess.square(7 - col, row)
         return chess.square(col, 7 - row)
 
+    def get_source_square_from_move(self, move):
+        """
+        returns a square coordinates where piece is moved from
+        source_square = get_source_square_from_move(e2e4)
+        => (4, 6)
+        """
+        if self.is_board_flipped:
+            return (
+                7 - chess.square_file(move.from_square),
+                chess.square_rank(move.from_square),
+            )
+        return chess.square_file(move.from_square), 7 - chess.square_rank(
+            move.from_square
+        )
+
+    def get_destination_square_from_move(self, move):
+        """
+        returns a square coordinates where piece is moved to
+        destination_square = get_destination_square_from_move(e2e4)
+        => (4, 4)
+        """
+        if self.is_board_flipped:
+            return (
+                7 - chess.square_file(move.to_square),
+                chess.square_rank(move.to_square),
+            )
+        return chess.square_file(move.to_square), 7 - chess.square_rank(move.to_square)
+
+    def get_selected_piece_color_and_name(self, square_number):
+        """
+        returns the color and name of the piece at the selected square
+        """
+        piece = self.board.piece_at(square_number)
+        if piece:
+            piece_color = "w" if piece.color == chess.WHITE else "b"
+            piece_name = piece.symbol().upper()
+            return piece_color, piece_name
+        return None, None
+
+    def get_board_turn(self):
+        """
+        returns which player's turn to play
+        """
+        return "w" if self.board.turn == chess.WHITE else "b"
+
+    def highlight_legal_moves(self, scene, square_number):
+        """
+        highlights the legal moves of a selected piece/square
+        """
+        legal_moves = self.move_manager.get_legal_moves(square_number)
+
+        for target_square in set(move.to_square for move in legal_moves):
+            col, row, x, y = self.get_square_coordinates(target_square)
+
+            # Add a circle in the center of the square
+            circle = scene.addEllipse(
+                x + vars.SQUARE_SIZE / 3,
+                y + vars.SQUARE_SIZE / 3,
+                vars.SQUARE_SIZE / 3,
+                vars.SQUARE_SIZE / 3,
+            )
+            circle.setPen(QtCore.Qt.NoPen)
+            circle.setBrush(QtGui.QColor(vars.THEME_COLORS["highlight_legal_moves"]))
+            circle.setOpacity(0.45)
+
+    def delete_highlighted_legal_moves(self, scene):
+        items = scene.items()
+        for item in items:
+            if isinstance(item, QtWidgets.QGraphicsEllipseItem):
+                brush_color = item.brush().color()
+                if brush_color == QtGui.QColor(
+                    vars.THEME_COLORS["highlight_legal_moves"]
+                ):
+                    scene.removeItem(item)
+
 
 class ChessBoardEvents:
     def __init__(self, chessboard):
         self.chessboard = chessboard
 
     def mousePress(self, event):
+        square_number = self.chessboard.get_selected_square_number(event)
         if event.buttons() == QtCore.Qt.LeftButton:
-            square_number = self.chessboard.get_selected_square_number(event)
-
             if self.chessboard.move_manager.selected_square is None:
                 self.chessboard.move_manager.selected_square = square_number
+                self.chessboard.highlight_legal_moves(
+                    self.chessboard.scene, self.chessboard.move_manager.selected_square
+                )
             else:
                 if square_number == self.chessboard.move_manager.selected_square:
                     self.chessboard.move_manager.selected_square = None
+                    self.chessboard.delete_highlighted_legal_moves(
+                        self.chessboard.scene
+                    )
                     return
 
                 self.chessboard.move_manager.move_piece(square_number)
+
                 if self.chessboard.move_manager.is_piece_moved is True:
+                    # this if condition is here because, in chess960 variant, user
+                    # have to click on a rook to do castling and don't know why the
+                    # `get_selected_piece_color_and_name` method returns None if user
+                    # try to click on a rook to do castling.
+                    # (tested on chess960 position number 665, 342 or similar positions)
+                    if self.chessboard.fischer_random and (
+                        self.chessboard.move_manager.is_queenside_castling
+                        or self.chessboard.move_manager.is_kingside_castling
+                    ):
+                        piece_color = (
+                            "b" if self.chessboard.board.turn == chess.WHITE else "w"
+                        )
+                        piece_name = "R"
+                    else:
+                        piece_color, piece_name = (
+                            self.chessboard.get_selected_piece_color_and_name(
+                                square_number
+                            )
+                        )
+                    last_move = self.chessboard.move_manager.get_last_move()
+                    source_square = self.chessboard.get_source_square_from_move(
+                        last_move
+                    )
+                    destination_square = (
+                        self.chessboard.get_destination_square_from_move(last_move)
+                    )
+
+                    self.chessboard.chess_pieces.delete_piece(source_square)
+
+                    if self.chessboard.move_manager.is_capture:
+                        self.chessboard.chess_pieces.delete_piece(destination_square)
+                        self.chessboard.move_manager.is_capture = False
+
+                    self.chessboard.chess_pieces.draw_piece(
+                        piece_name, piece_color, destination_square
+                    )
+
+                    self.chessboard.move_manager.is_piece_moved = False
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.chess_pieces.delete_pieces()
-                    self.chessboard.chess_pieces.draw_pieces()
+                    self.chessboard.delete_highlighted_legal_moves(
+                        self.chessboard.scene
+                    )
+                    square_number = None
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
@@ -71,9 +212,10 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
-        self.chess_pieces = ChessPieces(
-            self, self.is_board_flipped, self.scene, "cardinal"
+        self.setRenderHints(
+            QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform
         )
+        self.chess_pieces = ChessPieces(self, self.scene, "cardinal")
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
         self.events = ChessBoardEvents(self)
@@ -141,6 +283,9 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         if self.show_labels:
             self.draw_labels()
         self.chess_pieces.draw_pieces()
+        self.starting_board_position_fen = (
+            self.board.board_fen()
+        )  # hack to get the fen of only starting position
 
     def mousePressEvent(self, event):
         self.events.mousePress(event)
