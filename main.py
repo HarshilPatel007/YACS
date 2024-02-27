@@ -1,6 +1,6 @@
 from chessboard import DrawChessBoard
 import sys
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 import vars
 
 
@@ -14,6 +14,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.chess_board)
         self.chess_board.draw_chessboard()
         self.chess_board.setFixedSize(vars.SQUARE_SIZE * 8.5, vars.SQUARE_SIZE * 8.5)
+
+        # Create a toolbar
+        toolbar = QtWidgets.QToolBar()
+        self.addToolBar(toolbar)
+
+        flip_board_action = QtGui.QAction("Flip Board", self)
+        flip_board_action.triggered.connect(self.chess_board.flip_chessboard)
+        toolbar.addAction(flip_board_action)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

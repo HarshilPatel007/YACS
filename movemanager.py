@@ -11,6 +11,7 @@ class MoveManager:
         self.is_piece_moved = False
         self.is_capture = False
         self.is_ep = False
+        self.is_castling = False
         self.is_kingside_castling = False
         self.is_queenside_castling = False
 
@@ -27,6 +28,8 @@ class MoveManager:
                         self.is_capture = True
                     if self.chessboard.board.is_en_passant(move):
                         self.is_ep = True
+                    if self.chessboard.board.is_castling(move):
+                        self.is_castling = True
                     if self.chessboard.board.is_kingside_castling(move):
                         self.is_kingside_castling = True
                     if self.chessboard.board.is_queenside_castling(move):

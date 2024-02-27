@@ -29,7 +29,7 @@ class ChessPieces:
                 self.piece_images[(piece_color, piece_name)] = pixmap
 
     def draw_pieces(self):
-        piece_list = self.chessboard.board.fen().split()[0]
+        piece_list = self.chessboard.board.board_fen()
         square = 0
         for char in piece_list:
             if char.isdigit():
@@ -69,8 +69,8 @@ class ChessPieces:
             ) and item.pos() == QtCore.QPointF(x, y):
                 self.scene.removeItem(item)
 
-    def get_piece_position(self, piece_name, fen):
-        rows = fen.split("/")
+    def get_piece_position(self, piece_name, board_fen):
+        rows = board_fen.split("/")
 
         piece_positions = []
         for y, row in enumerate(rows):
@@ -105,16 +105,16 @@ class ChessPieces:
         handle special cases such as, castling & en-passant
         for drawing and removing pieces at source & destination square
         """
-        white_rooks_positions = self.chessboard.get_pieces_squares(
+        white_rooks_positions = self.chessboard.get_piece_position(
             chess.ROOK, chess.WHITE
         )
-        black_rooks_positions = self.chessboard.get_pieces_squares(
+        black_rooks_positions = self.chessboard.get_piece_position(
             chess.ROOK, chess.BLACK
         )
-        white_king_position = self.chessboard.get_pieces_squares(
+        white_king_position = self.chessboard.get_piece_position(
             chess.KING, chess.WHITE
         )
-        black_king_position = self.chessboard.get_pieces_squares(
+        black_king_position = self.chessboard.get_piece_position(
             chess.KING, chess.BLACK
         )
 
@@ -123,12 +123,6 @@ class ChessPieces:
         )
         black_rooks_positions_before_castling = self.get_piece_position(
             ["r"], self.chessboard.starting_board_position_fen
-        )
-        white_king_position_before_castling = self.get_piece_position(
-            ["K"], self.chessboard.starting_board_position_fen
-        )
-        black_king_position_before_castling = self.get_piece_position(
-            ["k"], self.chessboard.starting_board_position_fen
         )
 
         ep_pawn_square = (
@@ -140,88 +134,54 @@ class ChessPieces:
             ),
         )
 
-        # check if the move is kingside castling
-        if self.chessboard.move_manager.is_kingside_castling == True:
-            # delete the rook from old square
-            if piece_color == "w":
-                self.delete_piece(white_rooks_positions_before_castling[1])
-            if piece_color == "b":
-                self.delete_piece(black_rooks_positions_before_castling[1])
-
-            # draw the rook to new square
+        # check if the move is castling
+        if self.chessboard.move_manager.is_castling:
             rook = QtWidgets.QGraphicsPixmapItem(
                 self.piece_images[("w" if piece_color == "w" else "b", "R")]
             )
-            if piece_color == "w":
-                x = white_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
-                y = white_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
-            if piece_color == "b":
-                x = black_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
-                y = black_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
+            if self.chessboard.move_manager.is_kingside_castling:
+                if piece_color == "w":
+                    self.delete_piece(white_rooks_positions_before_castling[1])
+                    x = white_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
+                    y = white_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
+                if piece_color == "b":
+                    self.delete_piece(black_rooks_positions_before_castling[1])
+                    x = black_rooks_positions[1][0] * vars.SQUARE_SIZE + 5
+                    y = black_rooks_positions[1][1] * vars.SQUARE_SIZE + 5
+
+            if self.chessboard.move_manager.is_queenside_castling:
+                if piece_color == "w":
+                    self.delete_piece(white_rooks_positions_before_castling[0])
+                    x = white_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
+                    y = white_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
+                if piece_color == "b":
+                    self.delete_piece(black_rooks_positions_before_castling[0])
+                    x = black_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
+                    y = black_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
+
             rook.setPos(x, y)
             self.scene.addItem(rook)
 
-            # draw the king to new square
             king = QtWidgets.QGraphicsPixmapItem(
                 self.piece_images[("w" if piece_color == "w" else "b", "K")]
             )
-            if piece_color == "w":
-                x = white_king_position[0][0] * vars.SQUARE_SIZE + 5
-                y = white_king_position[0][1] * vars.SQUARE_SIZE + 5
-            if piece_color == "b":
-                x = black_king_position[0][0] * vars.SQUARE_SIZE + 5
-                y = black_king_position[0][1] * vars.SQUARE_SIZE + 5
+            if (
+                self.chessboard.move_manager.is_kingside_castling
+                or self.chessboard.move_manager.is_queenside_castling
+            ):
+                if piece_color == "w":
+                    x = white_king_position[0][0] * vars.SQUARE_SIZE + 5
+                    y = white_king_position[0][1] * vars.SQUARE_SIZE + 5
 
-            if white_king_position == white_king_position_before_castling:
-                pass
-            elif black_king_position == black_king_position_before_castling:
-                pass
-            else:
-                king.setPos(x, y)
-                self.scene.addItem(king)
+                if piece_color == "b":
+                    x = black_king_position[0][0] * vars.SQUARE_SIZE + 5
+                    y = black_king_position[0][1] * vars.SQUARE_SIZE + 5
 
+            king.setPos(x, y)
+            self.scene.addItem(king)
+
+            self.chessboard.move_manager.is_castling = False
             self.chessboard.move_manager.is_kingside_castling = False
-
-        # check if the move is queenside castling
-        if self.chessboard.move_manager.is_queenside_castling == True:
-            # delete the rook from old square
-            if piece_color == "w":
-                self.delete_piece(white_rooks_positions_before_castling[0])
-            if piece_color == "b":
-                self.delete_piece(black_rooks_positions_before_castling[0])
-
-            # draw the rook to new square
-            rook = QtWidgets.QGraphicsPixmapItem(
-                self.piece_images[("w" if piece_color == "w" else "b", "R")]
-            )
-            if piece_color == "w":
-                x = white_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
-                y = white_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
-            if piece_color == "b":
-                x = black_rooks_positions[0][0] * vars.SQUARE_SIZE + 5
-                y = black_rooks_positions[0][1] * vars.SQUARE_SIZE + 5
-            rook.setPos(x, y)
-            self.scene.addItem(rook)
-
-            # draw the king to new square
-            king = QtWidgets.QGraphicsPixmapItem(
-                self.piece_images[("w" if piece_color == "w" else "b", "K")]
-            )
-            if piece_color == "w":
-                x = white_king_position[0][0] * vars.SQUARE_SIZE + 5
-                y = white_king_position[0][1] * vars.SQUARE_SIZE + 5
-            if piece_color == "b":
-                x = black_king_position[0][0] * vars.SQUARE_SIZE + 5
-                y = black_king_position[0][1] * vars.SQUARE_SIZE + 5
-
-            if white_king_position == white_king_position_before_castling:
-                pass
-            elif black_king_position == black_king_position_before_castling:
-                pass
-            else:
-                king.setPos(x, y)
-                self.scene.addItem(king)
-
             self.chessboard.move_manager.is_queenside_castling = False
 
         # check if the move is an en-passant capture
@@ -229,3 +189,9 @@ class ChessPieces:
             # delete opponent's pawn from the scene at the square
             self.delete_piece(ep_pawn_square)
             self.chessboard.move_manager.is_ep = False
+
+
+
+    def redraw_pieces(self):
+        self.delete_pieces()
+        self.draw_pieces()
