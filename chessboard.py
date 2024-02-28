@@ -1,9 +1,9 @@
 import random
 
 import chess
-from PySide6 import QtCore, QtGui, QtSvg, QtSvgWidgets, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
-import vars
+import config
 from chesspieces import ChessPieces
 from movemanager import MoveManager
 
@@ -48,7 +48,7 @@ class ChessBoard:
         else:
             col = chess.square_file(square_number)
             row = 7 - chess.square_rank(square_number)
-        return col, row, col * vars.SQUARE_SIZE, row * vars.SQUARE_SIZE
+        return col, row, col * config.SQUARE_SIZE, row * config.SQUARE_SIZE
 
     def get_selected_square_number(self, event):
         """
@@ -56,39 +56,37 @@ class ChessBoard:
         """
         pos = event.position().toPoint()
         mapped_pos = self.mapToScene(pos)
-        col = int(mapped_pos.x() / vars.SQUARE_SIZE)
-        row = int(mapped_pos.y() / vars.SQUARE_SIZE)
+        col = int(mapped_pos.x() / config.SQUARE_SIZE)
+        row = int(mapped_pos.y() / config.SQUARE_SIZE)
         if self.is_board_flipped:
             return chess.square(7 - col, row)
         return chess.square(col, 7 - row)
 
-    def get_source_square_from_move(self, move):
+    def get_source_and_destination_square(self):
         """
-        returns a square coordinates where piece is moved from
-        source_square = get_source_square_from_move(e2e4)
-        => (4, 6)
+        returns the coordinates of the source and destination squares
+        of the last move made on the board
+        source_square, destination_square = get_source_and_destination_square()
+        => (4, 6), (4, 4)
         """
+        last_move = self.move_manager.get_last_move()
         if self.is_board_flipped:
-            return (
-                7 - chess.square_file(move.from_square),
-                chess.square_rank(move.from_square),
+            source_square = (
+                7 - chess.square_file(last_move.from_square),
+                chess.square_rank(last_move.from_square),
             )
-        return chess.square_file(move.from_square), 7 - chess.square_rank(
-            move.from_square
-        )
-
-    def get_destination_square_from_move(self, move):
-        """
-        returns a square coordinates where piece is moved to
-        destination_square = get_destination_square_from_move(e2e4)
-        => (4, 4)
-        """
-        if self.is_board_flipped:
-            return (
-                7 - chess.square_file(move.to_square),
-                chess.square_rank(move.to_square),
+            destination_square = (
+                7 - chess.square_file(last_move.to_square),
+                chess.square_rank(last_move.to_square),
             )
-        return chess.square_file(move.to_square), 7 - chess.square_rank(move.to_square)
+        else:
+            source_square = chess.square_file(
+                last_move.from_square
+            ), 7 - chess.square_rank(last_move.from_square)
+            destination_square = chess.square_file(
+                last_move.to_square
+            ), 7 - chess.square_rank(last_move.to_square)
+        return source_square, destination_square
 
     def get_selected_piece_color_and_name(self, square_number):
         """
@@ -127,13 +125,13 @@ class ChessBoardEvents:
                 and p_color == player_turn
             ):
                 self.chessboard.move_manager.selected_square = square_number
-                self.chessboard.highlight_manager.highlight_legal_moves(self.chessboard.move_manager.selected_square
+                self.chessboard.highlight_manager.highlight_legal_moves(
+                    self.chessboard.move_manager.selected_square
                 )
             else:
                 if square_number == self.chessboard.move_manager.selected_square:
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.highlight_manager.delete_highlighted_legal_moves(
-                    )
+                    self.chessboard.highlight_manager.delete_highlighted_legal_moves()
                     return
 
                 self.chessboard.move_manager.move_piece(square_number)
@@ -153,21 +151,19 @@ class ChessBoardEvents:
                         )
                         piece_name = "R"
                     else:
-                        piece_color, piece_name = (
-                            self.chessboard.get_selected_piece_color_and_name(
-                                square_number
-                            )
+                        (
+                            piece_color,
+                            piece_name,
+                        ) = self.chessboard.get_selected_piece_color_and_name(
+                            square_number
                         )
-                    last_move = self.chessboard.move_manager.get_last_move()
-                    source_square = self.chessboard.get_source_square_from_move(
-                        last_move
-                    )
-                    destination_square = (
-                        self.chessboard.get_destination_square_from_move(last_move)
-                    )
+                    (
+                        source_square,
+                        destination_square,
+                    ) = self.chessboard.get_source_and_destination_square()
 
                     self.chessboard.highlight_manager.delete_highlighted_squares(
-                        vars.THEME_COLORS["highlight_square"]
+                        config.THEME_COLORS["highlight_square"]
                     )
                     self.chessboard.highlight_manager.highlight_source_and_destination_squares()
 
@@ -183,38 +179,35 @@ class ChessBoardEvents:
 
                     self.chessboard.move_manager.is_piece_moved = False
                     self.chessboard.move_manager.selected_square = None
-                    self.chessboard.highlight_manager.delete_highlighted_legal_moves(
-                    )
+                    self.chessboard.highlight_manager.delete_highlighted_legal_moves()
                     self.chessboard.highlight_manager.delete_marked_squares()
 
                     square_number = None
 
         if event.button() == QtCore.Qt.RightButton:
-            self.chessboard.highlight_manager.delete_marked_square(square_number
-            )
+            self.chessboard.highlight_manager.delete_marked_square(square_number)
 
             modifiers = event.modifiers()
             if modifiers == QtCore.Qt.ControlModifier:
                 self.chessboard.highlight_manager.create_marked_square(
                     square_number,
-                    vars.THEME_COLORS["marked_square_ctrl"],
+                    config.THEME_COLORS["marked_square_ctrl"],
                 )
             elif modifiers == QtCore.Qt.AltModifier:
                 self.chessboard.highlight_manager.create_marked_square(
                     square_number,
-                    vars.THEME_COLORS["marked_square_alt"],
+                    config.THEME_COLORS["marked_square_alt"],
                 )
             elif modifiers == QtCore.Qt.ShiftModifier:
                 self.chessboard.highlight_manager.create_marked_square(
                     square_number,
-                    vars.THEME_COLORS["marked_square_shift"],
+                    config.THEME_COLORS["marked_square_shift"],
                 )
             else:
                 return
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
-
     def __init__(self):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
@@ -226,7 +219,7 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
         self.events = ChessBoardEvents(self)
-        self.highlight_manager = ChessBoardHighlightManager(self.board)
+        self.highlight_manager = ChessBoardHighlightManager(self)
         self.marked_squares = {}
 
     def draw_squares(self):
@@ -236,12 +229,12 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         for square in chess.SQUARES:
             col, row, x, y = self.get_square_coordinates(square)
 
-            rect = self.scene.addRect(x, y, vars.SQUARE_SIZE, vars.SQUARE_SIZE)
+            rect = self.scene.addRect(x, y, config.SQUARE_SIZE, config.SQUARE_SIZE)
 
             rect_color = (
-                vars.THEME_COLORS["light_square"]
+                config.THEME_COLORS["light_square"]
                 if (row + col) % 2 == 0
-                else vars.THEME_COLORS["dark_square"]
+                else config.THEME_COLORS["dark_square"]
             )
 
             rect.setPen(QtCore.Qt.NoPen)
@@ -260,16 +253,16 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
             col, row, x, y = self.get_square_coordinates(square)
 
             # Determine label position
-            row_label_x = x + vars.SQUARE_SIZE / 8 - 10
-            row_label_y = y + vars.SQUARE_SIZE / 8 - 10
+            row_label_x = x + config.SQUARE_SIZE / 8 - 10
+            row_label_y = y + config.SQUARE_SIZE / 8 - 10
 
-            col_label_x = x + vars.SQUARE_SIZE - vars.SQUARE_SIZE / 15 - 10
-            col_label_y = y + vars.SQUARE_SIZE - vars.SQUARE_SIZE / 8 - 15
+            col_label_x = x + config.SQUARE_SIZE - config.SQUARE_SIZE / 15 - 10
+            col_label_y = y + config.SQUARE_SIZE - config.SQUARE_SIZE / 8 - 15
 
             label_color = (
-                vars.THEME_COLORS["light_square"]
+                config.THEME_COLORS["light_square"]
                 if (row + col) % 2 != 0
-                else vars.THEME_COLORS["dark_square"]
+                else config.THEME_COLORS["dark_square"]
             )
 
             # Add label for the first set of columns (a-h)
@@ -306,9 +299,12 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         if self.show_labels:
             self.draw_labels()
 
-        self.chessboard.highlight_manager.update_marked_squares_coordinates()
-        self.chessboard.highlight_manager.delete_highlighted_squares(vars.THEME_COLORS["highlight_square"])
-        self.chessboard.highlight_manager.highlight_source_and_destination_squares()
+        self.highlight_manager.update_marked_squares_coordinates()
+        self.highlight_manager.delete_highlighted_squares(
+            config.THEME_COLORS["highlight_square"]
+        )
+        if len(self.board.move_stack) > 0:
+            self.highlight_manager.highlight_source_and_destination_squares()
 
         self.chess_pieces.redraw_pieces()
 
@@ -318,7 +314,6 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
 
 class ChessBoardHighlightManager:
     def __init__(self, chessboard):
-        super().__init__()
         self.chessboard = chessboard
 
     def highlight_legal_moves(self, square_number):
@@ -332,13 +327,13 @@ class ChessBoardHighlightManager:
 
             # Add a circle in the center of the square
             circle = self.chessboard.scene.addEllipse(
-                x + vars.SQUARE_SIZE / 3,
-                y + vars.SQUARE_SIZE / 3,
-                vars.SQUARE_SIZE / 3,
-                vars.SQUARE_SIZE / 3,
+                x + config.SQUARE_SIZE / 3,
+                y + config.SQUARE_SIZE / 3,
+                config.SQUARE_SIZE / 3,
+                config.SQUARE_SIZE / 3,
             )
             circle.setPen(QtCore.Qt.NoPen)
-            circle.setBrush(QtGui.QColor(vars.THEME_COLORS["highlight_legal_moves"]))
+            circle.setBrush(QtGui.QColor(config.THEME_COLORS["highlight_legal_moves"]))
             circle.setOpacity(0.45)
 
     def delete_highlighted_legal_moves(self):
@@ -347,7 +342,7 @@ class ChessBoardHighlightManager:
             if isinstance(item, QtWidgets.QGraphicsEllipseItem):
                 brush_color = item.brush().color()
                 if brush_color == QtGui.QColor(
-                    vars.THEME_COLORS["highlight_legal_moves"]
+                    config.THEME_COLORS["highlight_legal_moves"]
                 ):
                     self.chessboard.scene.removeItem(item)
 
@@ -357,10 +352,10 @@ class ChessBoardHighlightManager:
         """
         rect = QtWidgets.QGraphicsRectItem()
         rect.setRect(
-            square[0] * vars.SQUARE_SIZE,
-            square[1] * vars.SQUARE_SIZE,
-            vars.SQUARE_SIZE,
-            vars.SQUARE_SIZE,
+            square[0] * config.SQUARE_SIZE,
+            square[1] * config.SQUARE_SIZE,
+            config.SQUARE_SIZE,
+            config.SQUARE_SIZE,
         )
         rect.setPen(QtCore.Qt.NoPen)
         rect.setBrush(QtGui.QColor(color))
@@ -386,7 +381,7 @@ class ChessBoardHighlightManager:
 
         # Check if there is already a rectangle at the given position
         existing_rects = self.chessboard.scene.items(
-            QtCore.QRectF(x, y, vars.SQUARE_SIZE, vars.SQUARE_SIZE)
+            QtCore.QRectF(x, y, config.SQUARE_SIZE, config.SQUARE_SIZE)
         )
         for rect in existing_rects:
             if isinstance(rect, QtWidgets.QGraphicsRectItem):
@@ -394,7 +389,9 @@ class ChessBoardHighlightManager:
                 if brush_color == QtGui.QColor(color):
                     return
 
-        rect = self.chessboard.scene.addRect(x, y, vars.SQUARE_SIZE, vars.SQUARE_SIZE)
+        rect = self.chessboard.scene.addRect(
+            x, y, config.SQUARE_SIZE, config.SQUARE_SIZE
+        )
         rect.setPen(QtCore.Qt.NoPen)
         rect.setBrush(QtGui.QColor(color))
         rect.setOpacity(0.90)
@@ -415,25 +412,16 @@ class ChessBoardHighlightManager:
     def update_marked_squares_coordinates(self):
         for square, rect in self.chessboard.marked_squares.items():
             col, row, x, y = self.chessboard.get_square_coordinates(square)
-            rect.setRect(x, y, vars.SQUARE_SIZE, vars.SQUARE_SIZE)
+            rect.setRect(x, y, config.SQUARE_SIZE, config.SQUARE_SIZE)
 
     def highlight_source_and_destination_squares(self):
-
-        last_move = self.chessboard.move_manager.get_last_move()
-        source_square = self.chessboard.get_source_square_from_move(
-            last_move
-        )
-        destination_square = (
-            self.chessboard.get_destination_square_from_move(last_move)
-        )
-
-        self.create_highlighted_square(
+        (
             source_square,
-            vars.THEME_COLORS["highlight_square"],
-            0.50
+            destination_square,
+        ) = self.chessboard.get_source_and_destination_square()
+        self.create_highlighted_square(
+            source_square, config.THEME_COLORS["highlight_square"], 0.50
         )
         self.create_highlighted_square(
-            destination_square,
-            vars.THEME_COLORS["highlight_square"],
-            0.50
+            destination_square, config.THEME_COLORS["highlight_square"], 0.50
         )

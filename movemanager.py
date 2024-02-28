@@ -1,10 +1,8 @@
 import chess
-from PySide6 import QtWidgets, QtCore
-import vars
+from PySide6 import QtWidgets
 
 
 class MoveManager:
-
     def __init__(self, chessboard):
         self.chessboard = chessboard
         self.selected_square = None
@@ -60,7 +58,8 @@ class MoveManager:
         pawn_promotion.pawn_promotion_dialog(move)
 
     def get_last_move(self):
-        return self.chessboard.board.peek()
+        if len(self.chessboard.board.move_stack) > 0:
+            return self.chessboard.board.peek()
 
     def get_legal_moves(self, square):
         moves = []
