@@ -13,7 +13,6 @@ class ChessBoard:
         self.fischer_random = True
         self.board = chess.Board(chess960=self.fischer_random)
         self.is_board_flipped = False
-        self.move_manager = MoveManager(self)
         self.starting_board_position_fen = None
 
     def set_chess960_board(self):
@@ -99,107 +98,104 @@ class ChessBoard:
             return piece_color, piece_name
         return None, None
 
-    def get_board_turn(self):
-        """
-        returns which player's turn to play
-        """
-        return "w" if self.board.turn == chess.WHITE else "b"
-
 
 class ChessBoardEvents:
-    def __init__(self, chessboard):
-        self.chessboard = chessboard
+    def __init__(self, board_updater):
+        self.board_updater = board_updater
+        self.game = board_updater.game
+        self.move_manager = self.game.move_manager
+        self.highlight_manager = board_updater.highlight_manager
 
     def mousePress(self, event):
-        square_number = self.chessboard.get_selected_square_number(event)
-        row, col, x, y = self.chessboard.get_square_coordinates(square_number)
-        p_color, p_name = self.chessboard.get_selected_piece_color_and_name(
+        square_number = self.board_updater.get_selected_square_number(event)
+        row, col, x, y = self.board_updater.get_square_coordinates(square_number)
+        p_color, p_name = self.board_updater.get_selected_piece_color_and_name(
             square_number
         )
-        player_turn = self.chessboard.get_board_turn()
+        player_turn = self.game.get_turn()
 
         if event.buttons() == QtCore.Qt.LeftButton:
             if (
-                self.chessboard.move_manager.selected_square is None
+                self.game.move_manager.selected_square is None
                 and (p_color or p_name) is not None
                 and p_color == player_turn
             ):
-                self.chessboard.move_manager.selected_square = square_number
-                self.chessboard.highlight_manager.highlight_legal_moves(
-                    self.chessboard.move_manager.selected_square
+                self.move_manager.selected_square = square_number
+                self.highlight_manager.highlight_legal_moves(
+                    self.move_manager.selected_square
                 )
             else:
-                if square_number == self.chessboard.move_manager.selected_square:
-                    self.chessboard.move_manager.selected_square = None
-                    self.chessboard.highlight_manager.delete_highlighted_legal_moves()
+                if square_number == self.move_manager.selected_square:
+                    self.move_manager.selected_square = None
+                    self.highlight_manager.delete_highlighted_legal_moves()
                     return
 
-                self.chessboard.move_manager.move_piece(square_number)
+                self.move_manager.move_piece(square_number)
 
-                if self.chessboard.move_manager.is_piece_moved:
+                if self.move_manager.is_piece_moved:
                     # this if condition is here because, in chess960 variant, user
                     # have to click on a rook to do castling and `piece` variable of
                     # `get_selected_piece_color_and_name` method returns None if user
                     # try to click on a rook to do castling.
                     # (tested on chess960 position number 665, 342 or similar positions)
-                    if self.chessboard.fischer_random and (
-                        self.chessboard.move_manager.is_queenside_castling
-                        or self.chessboard.move_manager.is_kingside_castling
+                    if self.game.fischer_random and (
+                        self.move_manager.is_queenside_castling
+                        or self.move_maneger.is_kingside_castling
                     ):
                         piece_color = (
-                            "b" if self.chessboard.board.turn == chess.WHITE else "w"
+                            "b" if self.game.board.turn == chess.WHITE else "w"
                         )
                         piece_name = "R"
                     else:
                         (
                             piece_color,
                             piece_name,
-                        ) = self.chessboard.get_selected_piece_color_and_name(
+                        ) = self.move_manager.get_selected_piece_color_and_name(
                             square_number
                         )
                     (
                         source_square,
                         destination_square,
-                    ) = self.chessboard.get_source_and_destination_square()
+                    ) = self.move_manager.get_source_and_destination_square()
 
-                    self.chessboard.highlight_manager.delete_highlighted_squares(
+                    self.highlight_manager.delete_highlighted_squares(
                         config.THEME_COLORS["highlight_square"]
                     )
-                    self.chessboard.highlight_manager.highlight_source_and_destination_squares()
+                    self.highlight_manager.highlight_source_and_destination_squares()
 
-                    self.chessboard.chess_pieces.delete_piece(source_square)
+                    self.board_updater.chess_pieces.delete_piece(source_square)
 
-                    if self.chessboard.move_manager.is_capture:
-                        self.chessboard.chess_pieces.delete_piece(destination_square)
-                        self.chessboard.move_manager.is_capture = False
+                    if self.move_manager.is_capture:
+                        self.board_updater.chess_pieces.delete_piece(destination_square)
+                        self.move_maneger.is_capture = False
 
-                    self.chessboard.chess_pieces.draw_piece(
+                    self.board_updater.chess_pieces.draw_piece(
                         piece_name, piece_color, destination_square
                     )
 
-                    self.chessboard.move_manager.is_piece_moved = False
-                    self.chessboard.move_manager.selected_square = None
-                    self.chessboard.highlight_manager.delete_highlighted_legal_moves()
-                    self.chessboard.highlight_manager.delete_marked_squares()
+                    self.move_manager.is_piece_moved = False
+                    self.move_manager.selected_square = None
+                    self.highlight_manager.delete_highlighted_legal_moves()
+                    self.highlight_manager.delete_marked_squares()
 
                     square_number = None
 
         if event.button() == QtCore.Qt.RightButton:
-            self.chessboard.highlight_manager.delete_marked_square(square_number)
+            self.highlight_manager.delete_marked_square(square_number)
 
             modifiers = event.modifiers()
             if modifiers == QtCore.Qt.ControlModifier:
-                self.chessboard.highlight_manager.create_marked_square(
+                self.highlight_manager.create_marked_square(
                     square_number,
                     config.THEME_COLORS["marked_square_ctrl"],
                 )
             elif modifiers == QtCore.Qt.AltModifier:
-                self.chessboard.highlight_manager.create_marked_square(
+                self.highlight_manager.create_marked_square(
                     square_number,
                     config.THEME_COLORS["marked_square_alt"],
                 )
             elif modifiers == QtCore.Qt.ShiftModifier:
-                self.chessboard.highlight_manager.create_marked_square(
+                self.highlight_manager.create_marked_square(
                     square_number,
                     config.THEME_COLORS["marked_square_shift"],
                 )
@@ -208,7 +204,7 @@ class ChessBoardEvents:
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
-    def __init__(self):
+    def __init__(self, game):
         super().__init__()
         self.scene = QtWidgets.QGraphicsScene()
         self.setScene(self.scene)
@@ -218,8 +214,10 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         self.chess_pieces = ChessPieces(self, self.scene)
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
-        self.events = ChessBoardEvents(self)
+        # the game on the board
+        self.game = game
         self.highlight_manager = ChessBoardHighlightManager(self)
+        self.events = ChessBoardEvents(self)
         self.marked_squares = {}
 
     def draw_squares(self):
@@ -313,20 +311,20 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
 
 
 class ChessBoardHighlightManager:
-    def __init__(self, chessboard):
-        self.chessboard = chessboard
+    def __init__(self, board_updater):
+        self.board_updater = board_updater
 
     def highlight_legal_moves(self, square_number):
         """
         highlights the legal moves of a selected piece/square
         """
-        legal_moves = self.chessboard.move_manager.get_legal_moves(square_number)
+        legal_moves = self.board_updater.move_maneger.get_legal_moves(square_number)
 
         for target_square in set(move.to_square for move in legal_moves):
-            col, row, x, y = self.chessboard.get_square_coordinates(target_square)
+            col, row, x, y = self.board_updater.get_square_coordinates(target_square)
 
             # Add a circle in the center of the square
-            circle = self.chessboard.scene.addEllipse(
+            circle = self.board_updater.scene.addEllipse(
                 x + config.SQUARE_SIZE / 3,
                 y + config.SQUARE_SIZE / 3,
                 config.SQUARE_SIZE / 3,
@@ -337,14 +335,14 @@ class ChessBoardHighlightManager:
             circle.setOpacity(0.45)
 
     def delete_highlighted_legal_moves(self):
-        items = self.chessboard.scene.items()
+        items = self.board_updater.scene.items()
         for item in items:
             if isinstance(item, QtWidgets.QGraphicsEllipseItem):
                 brush_color = item.brush().color()
                 if brush_color == QtGui.QColor(
                     config.THEME_COLORS["highlight_legal_moves"]
                 ):
-                    self.chessboard.scene.removeItem(item)
+                    self.board_updater.scene.removeItem(item)
 
     def create_highlighted_square(self, square, color, opacity):
         """
@@ -360,21 +358,21 @@ class ChessBoardHighlightManager:
         rect.setPen(QtCore.Qt.NoPen)
         rect.setBrush(QtGui.QColor(color))
         rect.setOpacity(opacity)
-        return self.chessboard.scene.addItem(rect)
+        return self.board_updater.scene.addItem(rect)
 
     def delete_highlighted_squares(self, color):
-        items = self.chessboard.scene.items()
+        items = self.board_updater.scene.items()
         for item in items:
             if isinstance(item, QtWidgets.QGraphicsRectItem):
                 brush_color = item.brush().color()
                 if brush_color == QtGui.QColor(color):
-                    self.chessboard.scene.removeItem(item)
+                    self.board_updater.scene.removeItem(item)
 
     def create_marked_square(self, square_number, color):
         """
         creates the rect at the given pos.
         """
-        if square_number in self.chessboard.marked_squares:
+        if square_number in self.board_updater.marked_squares:
             return
 
         col, row, x, y = self.chessboard.get_square_coordinates(square_number)

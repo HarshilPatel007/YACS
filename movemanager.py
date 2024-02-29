@@ -1,10 +1,18 @@
-import chess
+#   This file is part of YACS
+#
+#   YACS free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+#
+#   YACS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License along with YACS. If not, see <https://www.gnu.org/licenses/>. 
 from PySide6 import QtWidgets
+import chess
 
 
 class MoveManager:
-    def __init__(self, chessboard):
-        self.chessboard = chessboard
+    def __init__(self, game):
+        self.game = game
+        self.chessboard = game.chessboard
         self.selected_square = None
         self.is_piece_moved = False
         self.is_capture = False
@@ -15,24 +23,26 @@ class MoveManager:
 
     def move_piece(self, target_square):
         if self.selected_square is not None:
-            for move in self.chessboard.board.legal_moves:
+            for move in self.game.board.legal_moves:
                 if (
                     move.from_square == self.selected_square
                     and move.to_square == target_square
                 ):
                     if self._is_pawn_promotion(target_square):
                         self._show_pawn_promotion_dialog(move)
-                    if self.chessboard.board.is_capture(move):
+                    if self.game.board.is_capture(move):
                         self.is_capture = True
-                    if self.chessboard.board.is_en_passant(move):
+                    if self.game.board.is_en_passant(move):
                         self.is_ep = True
-                    if self.chessboard.board.is_castling(move):
+                    if self.game.board.is_castling(move):
                         self.is_castling = True
-                    if self.chessboard.board.is_kingside_castling(move):
+                    if self.game.board.is_kingside_castling(move):
                         self.is_kingside_castling = True
-                    if self.chessboard.board.is_queenside_castling(move):
+                    if self.game.board.is_queenside_castling(move):
                         self.is_queenside_castling = True
-                    self.chessboard.board.push(move)
+
+
+                    self.game.make_move(move)
                     self.is_piece_moved = True
                     break
 
@@ -40,30 +50,30 @@ class MoveManager:
         """
         check if the pawn reached at the last rank or not
         """
-        return self.chessboard.board.piece_type_at(
+        return self.game.board.piece_type_at(
             self.selected_square
         ) == chess.PAWN and (
             (
-                self.chessboard.board.turn == chess.WHITE
+                self.game.board.turn == chess.WHITE
                 and chess.square_rank(target_square) == 7
             )
             or (
-                self.chessboard.board.turn == chess.BLACK
+                self.game.board.turn == chess.BLACK
                 and chess.square_rank(target_square) == 0
             )
         )
 
     def _show_pawn_promotion_dialog(self, move):
-        pawn_promotion = PawnPromotion(self.chessboard)
+        pawn_promotion = PawnPromotion(self.game)
         pawn_promotion.pawn_promotion_dialog(move)
 
     def get_last_move(self):
-        if len(self.chessboard.board.move_stack) > 0:
-            return self.chessboard.board.peek()
+        if len(self.game.board.move_stack) > 0:
+            return self.game.board.peek()
 
     def get_legal_moves(self, square):
         moves = []
-        for move in self.chessboard.board.legal_moves:
+        for move in self.game.board.legal_moves:
             if move.from_square == square:
                 moves.append(move)
         return moves
