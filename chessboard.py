@@ -215,7 +215,7 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
         self.setRenderHints(
             QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform
         )
-        self.chess_pieces = ChessPieces(self, self.scene)
+        self.chess_pieces = ChessPieces(self)
         self.chess_pieces.load_chess_piece_images()
         self.show_labels = True
         self.events = ChessBoardEvents(self)
