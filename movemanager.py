@@ -21,6 +21,32 @@ class MoveManager:
         self.is_kingside_castling = False
         self.is_queenside_castling = False
 
+    def get_source_and_destination_square(self):
+        """
+        returns the coordinates of the source and destination squares
+        of the last move made on the board
+        source_square, destination_square = get_source_and_destination_square()
+        => (4, 6), (4, 4)
+        """
+        last_move = self.get_last_move()
+        if self.chessboard.is_board_flipped:
+            source_square = (
+                7 - chess.square_file(last_move.from_square),
+                chess.square_rank(last_move.from_square),
+            )
+            destination_square = (
+                7 - chess.square_file(last_move.to_square),
+                chess.square_rank(last_move.to_square),
+            )
+        else:
+            source_square = chess.square_file(
+                last_move.from_square
+            ), 7 - chess.square_rank(last_move.from_square)
+            destination_square = chess.square_file(
+                last_move.to_square
+            ), 7 - chess.square_rank(last_move.to_square)
+        return source_square, destination_square
+
     def move_piece(self, target_square):
         if self.selected_square is not None:
             for move in self.game.board.legal_moves:

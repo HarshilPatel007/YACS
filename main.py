@@ -11,7 +11,7 @@ import sys
 from PySide6 import QtGui, QtWidgets
 
 import config
-from chessboard import DrawChessBoard
+from drawchessboardcontroller import DrawChessBoard
 from game import Game
 
 

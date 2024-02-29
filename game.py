@@ -14,6 +14,7 @@ import chess
 class Game:
     """a chess game"""
     def __init__(self, board=None):
+        # allow creating games with existing boards
         if board:
             self.chessboard = board
             self.board = self.chessboard.board
@@ -21,12 +22,15 @@ class Game:
             self.chessboard = ChessBoard()
             self.board = self.chessboard.board
 
+
         self.move_manager = MoveManager(self)
 
         self.playing_white = None #TODO: None will work for now
         self.playing_black = None
 
         self.moves = [] # moves in this game
+
+        self.fischer_random = False
 
     # you can tell I am still in java mode, lol
     def get_white_player(self) -> str:
@@ -37,10 +41,10 @@ class Game:
         """get the black player or None"""
         return self.playing_black
 
-    def make_move(move) -> None:
+    def make_move(self, move) -> None:
         """make a move in this game, and add it to the moves made"""
         self.chessboard.board.push(move)
-        self.moves.push(move)
+        self.moves.append(move)
 
     def get_turn(self) -> str: 
         """get who's turn it is: 'w' if white eles 'b'"""
