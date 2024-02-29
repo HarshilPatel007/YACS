@@ -13,9 +13,8 @@ import config
 
 
 class ChessPieces:
-    def __init__(self, chessboard, scene, piece_set="staunty"):
+    def __init__(self, chessboard, piece_set="staunty"):
         self.chessboard = chessboard
-        self.scene = scene
         self.piece_images = {}
         self.piece_set = piece_set
 
@@ -56,25 +55,25 @@ class ChessPieces:
                     self.piece_images[(piece_color, piece_name)]
                 )
                 piece_item.setPos(x, y)
-                self.scene.addItem(piece_item)
+                self.chessboard.scene.addItem(piece_item)
 
                 square += 1
 
     def delete_pieces(self):
-        items = self.scene.items()
+        items = self.chessboard.scene.items()
         for item in items:
             if isinstance(item, QtWidgets.QGraphicsPixmapItem):
-                self.scene.removeItem(item)
+                self.chessboard.scene.removeItem(item)
 
     def delete_piece(self, square):
-        items = self.scene.items()
+        items = self.chessboard.scene.items()
         x = square[0] * config.SQUARE_SIZE + 5
         y = square[1] * config.SQUARE_SIZE + 5
         for item in items:
             if isinstance(
                 item, QtWidgets.QGraphicsPixmapItem
             ) and item.pos() == QtCore.QPointF(x, y):
-                self.scene.removeItem(item)
+                self.chessboard.scene.removeItem(item)
 
     def get_piece_position(self, piece_name, board_fen):
         rows = board_fen.split("/")
@@ -103,7 +102,7 @@ class ChessPieces:
             self.piece_images[(piece_color, piece_name)]
         )
         piece_item.setPos(x, y)
-        self.scene.addItem(piece_item)
+        self.chessboard.scene.addItem(piece_item)
 
         self.handle_special_cases(piece_color, destination_square)
 
@@ -167,7 +166,7 @@ class ChessPieces:
                     y = black_rooks_positions[0][1] * config.SQUARE_SIZE + 5
 
             rook.setPos(x, y)
-            self.scene.addItem(rook)
+            self.chessboard.scene.addItem(rook)
 
             king = QtWidgets.QGraphicsPixmapItem(
                 self.piece_images[("w" if piece_color == "w" else "b", "K")]
@@ -185,7 +184,7 @@ class ChessPieces:
                     y = black_king_position[0][1] * config.SQUARE_SIZE + 5
 
             king.setPos(x, y)
-            self.scene.addItem(king)
+            self.chessboard.scene.addItem(king)
 
             self.chessboard.move_manager.is_castling = False
             self.chessboard.move_manager.is_kingside_castling = False
