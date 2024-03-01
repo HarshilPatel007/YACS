@@ -311,6 +311,16 @@ class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):
     def mousePressEvent(self, event):
         self.events.mousePress(event)
 
+    def undo_last_move(self):
+        self.move_manager.remove_last_move()
+        self.highlight_manager.delete_highlighted_squares(
+            config.THEME_COLORS["highlight_square"]
+        )
+        if len(self.board.move_stack) > 0:
+            self.highlight_manager.highlight_source_and_destination_squares()
+
+        self.chess_pieces.redraw_pieces()
+
 
 class ChessBoardHighlightManager:
     def __init__(self, chessboard):
@@ -348,7 +358,7 @@ class ChessBoardHighlightManager:
 
     def create_highlighted_square(self, square, color, opacity):
         """
-        creates the rect at the source and destination squares
+        creates the rect at the given square coordinate
         """
         rect = QtWidgets.QGraphicsRectItem()
         rect.setRect(
@@ -372,7 +382,7 @@ class ChessBoardHighlightManager:
 
     def create_marked_square(self, square_number, color):
         """
-        creates the rect at the given pos.
+        creates the rect at the given square number
         """
         if square_number in self.chessboard.marked_squares:
             return
@@ -394,7 +404,7 @@ class ChessBoardHighlightManager:
         )
         rect.setPen(QtCore.Qt.NoPen)
         rect.setBrush(QtGui.QColor(color))
-        rect.setOpacity(0.90)
+        rect.setOpacity(0.80)
         self.chessboard.marked_squares[square_number] = rect
         self.chessboard.chess_pieces.redraw_pieces()
 

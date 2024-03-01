@@ -27,6 +27,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         flip_board_action.triggered.connect(self.chess_board.flip_chessboard)
         toolbar.addAction(flip_board_action)
 
+        undo_last_move_action = QtGui.QAction("Undo Last Move", self)
+        undo_last_move_action.triggered.connect(
+            self.chess_board.undo_last_move
+        )
+        toolbar.addAction(undo_last_move_action)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

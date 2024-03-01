@@ -61,10 +61,14 @@ class MoveManager:
         if len(self.chessboard.board.move_stack) > 0:
             return self.chessboard.board.peek()
 
-    def get_legal_moves(self, square):
+    def remove_last_move(self):
+        if len(self.chessboard.board.move_stack) > 0:
+            return self.chessboard.board.pop()
+
+    def get_legal_moves(self, square_number):
         moves = []
         for move in self.chessboard.board.legal_moves:
-            if move.from_square == square:
+            if move.from_square == square_number:
                 moves.append(move)
         return moves
 
