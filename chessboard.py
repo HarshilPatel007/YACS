@@ -1,4 +1,6 @@
 import random
+import asyncio
+import time
 
 import chess
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -15,6 +17,7 @@ class ChessBoard:
         self.is_board_flipped = False
         self.move_manager = MoveManager(self)
         self.starting_board_position_fen = None
+        self.engine = None
 
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
@@ -105,6 +108,10 @@ class ChessBoard:
         """
         return "w" if self.board.turn == chess.WHITE else "b"
 
+    def make_engine_move(self):
+        if self.board.turn == chess.BLACK:
+            asyncio.run(self.move_manager.engine_move())
+
 
 class ChessBoardEvents:
     def __init__(self, chessboard):
@@ -167,22 +174,27 @@ class ChessBoardEvents:
                     )
                     self.chessboard.highlight_manager.highlight_source_and_destination_squares()
 
-                    self.chessboard.chess_pieces.delete_piece(source_square)
+                    # self.chessboard.chess_pieces.delete_piece(source_square)
+                    self.chessboard.chess_pieces.redraw_pieces()
 
-                    if self.chessboard.move_manager.is_capture:
-                        self.chessboard.chess_pieces.delete_piece(destination_square)
-                        self.chessboard.move_manager.is_capture = False
+                    # if self.chessboard.move_manager.is_capture:
+                    #     self.chessboard.chess_pieces.delete_piece(destination_square)
+                    #     self.chessboard.move_manager.is_capture = False
 
-                    self.chessboard.chess_pieces.draw_piece(
-                        piece_name, piece_color, destination_square
-                    )
+                    # self.chessboard.chess_pieces.draw_piece(
+                    #     piece_name, piece_color, destination_square
+                    # )
 
                     self.chessboard.move_manager.is_piece_moved = False
                     self.chessboard.move_manager.selected_square = None
                     self.chessboard.highlight_manager.delete_highlighted_legal_moves()
                     self.chessboard.highlight_manager.delete_marked_squares()
 
-                    square_number = None
+                    QtCore.QTimer.singleShot(
+                        30000, self.update_board_and_make_engine_move
+                    )
+
+                #     square_number = None
 
         if event.button() == QtCore.Qt.RightButton:
             self.chessboard.highlight_manager.delete_marked_square(square_number)
@@ -205,6 +217,10 @@ class ChessBoardEvents:
                 )
             else:
                 return
+
+    def update_board_and_make_engine_move(self):
+        self.chessboard.make_engine_move()
+        self.chessboard.chess_pieces.redraw_pieces()
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):

@@ -1,4 +1,6 @@
 import chess
+import chess.engine
+import asyncio
 from PySide6 import QtWidgets
 
 
@@ -35,6 +37,24 @@ class MoveManager:
                     self.chessboard.board.push(move)
                     self.is_piece_moved = True
                     break
+
+    async def engine_move(self):
+        engine_options = {
+            "Skill Level": 10,
+            "UCI_Elo": 1399,
+        }
+        transport, self.chessboard.engine = await chess.engine.popen_uci(
+            "engine/stockfish"
+        )
+        result = await self.chessboard.engine.play(
+            self.chessboard.board,
+            chess.engine.Limit(time=10, depth=10),
+            options=engine_options,
+        )
+        self.chessboard.board.push(result.move)
+        self.is_piece_moved = True
+        await self.chessboard.engine.quit()
+        self.chessboard.engine = None
 
     def _is_pawn_promotion(self, target_square):
         """
