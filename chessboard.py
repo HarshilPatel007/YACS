@@ -1,5 +1,6 @@
-import random
 import asyncio
+import random
+import sys
 import time
 
 import chess
@@ -8,16 +9,57 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import config
 from chesspieces import ChessPieces
 from movemanager import MoveManager
+from welcomedialog import WelcomeDialog
 
 
 class ChessBoard:
     def __init__(self):
-        self.fischer_random = True
+
+        # Show welcome dialog
+        self.welcome_dialog = WelcomeDialog()
+
+        if self.welcome_dialog.exec() == QtWidgets.QDialog.Accepted:
+            self.options = self.welcome_dialog.get_options()
+        else:
+            sys.exit(0)
+
+        if self.options["is_fischer_random"]:
+            self.fischer_random = True
+        else:
+            self.fischer_random = False
+
+        if (
+            self.options["white_play_as"] == "engine"
+            and self.options["black_play_as"] == "engine"
+        ):
+            self.white_play_as = "engine"
+            self.engine_plays_first = True
+            self.black_play_as = "engine"
+        else:
+            if self.options["white_play_as"] == "human":
+                self.white_play_as = "human"
+                self.engine_plays_first = False
+            else:
+                self.white_play_as = "engine"
+                self.engine_plays_first = True
+
+            if self.options["black_play_as"] == "human":
+                self.black_play_as = "human"
+            else:
+                self.black_play_as = "engine"
+
         self.board = chess.Board(chess960=self.fischer_random)
         self.is_board_flipped = False
         self.move_manager = MoveManager(self)
         self.starting_board_position_fen = None
-        self.engine = None
+
+        if self.engine_plays_first:
+            self.move_manager.make_engine_move()
+            # self.highlight_manager.delete_highlighted_squares(
+            #     config.THEME_COLORS["highlight_square"]
+            # )
+            # self.highlight_manager.highlight_source_and_destination_squares()
+            # self.chess_pieces.redraw_pieces()
 
     def set_chess960_board(self):
         self.board.set_chess960_pos(random.randint(1, 959))
@@ -108,10 +150,6 @@ class ChessBoard:
         """
         return "w" if self.board.turn == chess.WHITE else "b"
 
-    def make_engine_move(self):
-        if self.board.turn == chess.BLACK:
-            asyncio.run(self.move_manager.engine_move())
-
 
 class ChessBoardEvents:
     def __init__(self, chessboard):
@@ -144,57 +182,18 @@ class ChessBoardEvents:
                 self.chessboard.move_manager.move_piece(square_number)
 
                 if self.chessboard.move_manager.is_piece_moved:
-                    # this if condition is here because, in chess960 variant, user
-                    # have to click on a rook to do castling and `piece` variable of
-                    # `get_selected_piece_color_and_name` method returns None if user
-                    # try to click on a rook to do castling.
-                    # (tested on chess960 position number 665, 342 or similar positions)
-                    if self.chessboard.fischer_random and (
-                        self.chessboard.move_manager.is_queenside_castling
-                        or self.chessboard.move_manager.is_kingside_castling
-                    ):
-                        piece_color = (
-                            "b" if self.chessboard.board.turn == chess.WHITE else "w"
-                        )
-                        piece_name = "R"
-                    else:
-                        (
-                            piece_color,
-                            piece_name,
-                        ) = self.chessboard.get_selected_piece_color_and_name(
-                            square_number
-                        )
-                    (
-                        source_square,
-                        destination_square,
-                    ) = self.chessboard.get_source_and_destination_square()
-
                     self.chessboard.highlight_manager.delete_highlighted_squares(
                         config.THEME_COLORS["highlight_square"]
                     )
                     self.chessboard.highlight_manager.highlight_source_and_destination_squares()
-
-                    # self.chessboard.chess_pieces.delete_piece(source_square)
                     self.chessboard.chess_pieces.redraw_pieces()
-
-                    # if self.chessboard.move_manager.is_capture:
-                    #     self.chessboard.chess_pieces.delete_piece(destination_square)
-                    #     self.chessboard.move_manager.is_capture = False
-
-                    # self.chessboard.chess_pieces.draw_piece(
-                    #     piece_name, piece_color, destination_square
-                    # )
 
                     self.chessboard.move_manager.is_piece_moved = False
                     self.chessboard.move_manager.selected_square = None
                     self.chessboard.highlight_manager.delete_highlighted_legal_moves()
                     self.chessboard.highlight_manager.delete_marked_squares()
 
-                    QtCore.QTimer.singleShot(
-                        30000, self.update_board_and_make_engine_move
-                    )
-
-                #     square_number = None
+                    QtCore.QTimer.singleShot(1000, self.engine_move)
 
         if event.button() == QtCore.Qt.RightButton:
             self.chessboard.highlight_manager.delete_marked_square(square_number)
@@ -218,9 +217,17 @@ class ChessBoardEvents:
             else:
                 return
 
-    def update_board_and_make_engine_move(self):
-        self.chessboard.make_engine_move()
+    def engine_move(self):
+        self.chessboard.move_manager.make_engine_move()
+
+        self.chessboard.highlight_manager.delete_highlighted_squares(
+            config.THEME_COLORS["highlight_square"]
+        )
+        self.chessboard.highlight_manager.highlight_source_and_destination_squares()
+
         self.chessboard.chess_pieces.redraw_pieces()
+
+        self.chessboard.move_manager.is_piece_moved = False
 
 
 class DrawChessBoard(QtWidgets.QGraphicsView, ChessBoard):

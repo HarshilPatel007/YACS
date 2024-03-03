@@ -1,7 +1,9 @@
-import chess
-import chess.engine
 import asyncio
+
+import chess
 from PySide6 import QtWidgets
+
+from engine import Engine
 
 
 class MoveManager:
@@ -14,6 +16,7 @@ class MoveManager:
         self.is_castling = False
         self.is_kingside_castling = False
         self.is_queenside_castling = False
+        self.engine = Engine(self.chessboard)
 
     def move_piece(self, target_square):
         if self.selected_square is not None:
@@ -38,23 +41,13 @@ class MoveManager:
                     self.is_piece_moved = True
                     break
 
-    async def engine_move(self):
-        engine_options = {
-            "Skill Level": 10,
-            "UCI_Elo": 1399,
-        }
-        transport, self.chessboard.engine = await chess.engine.popen_uci(
-            "engine/stockfish"
-        )
-        result = await self.chessboard.engine.play(
-            self.chessboard.board,
-            chess.engine.Limit(time=10, depth=10),
-            options=engine_options,
-        )
-        self.chessboard.board.push(result.move)
-        self.is_piece_moved = True
-        await self.chessboard.engine.quit()
-        self.chessboard.engine = None
+    def make_engine_move(self):
+        player_turn = self.chessboard.get_board_turn()
+
+        if (self.chessboard.white_play_as == "engine" and player_turn == "w") or (
+            self.chessboard.black_play_as == "engine" and player_turn == "b"
+        ):
+            self.chessboard.board.push(asyncio.run((self.engine.get_engine_move())))
 
     def _is_pawn_promotion(self, target_square):
         """

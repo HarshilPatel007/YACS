@@ -1,9 +1,10 @@
 import sys
 
-from PySide6 import QtGui, QtWidgets
+from PySide6 import QtGui, QtWidgets, QtCore
 
 import config
 from chessboard import DrawChessBoard
+from toolbar import Toolbar
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
@@ -20,18 +21,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         )
 
         # Create a toolbar
-        toolbar = QtWidgets.QToolBar()
-        self.addToolBar(toolbar)
+        self.toolbar = Toolbar(self)
+        self.addToolBar(self.toolbar)
 
-        flip_board_action = QtGui.QAction("Flip Board", self)
-        flip_board_action.triggered.connect(self.chess_board.flip_chessboard)
-        toolbar.addAction(flip_board_action)
-
-        undo_last_move_action = QtGui.QAction("Undo Last Move", self)
-        undo_last_move_action.triggered.connect(
-            self.chess_board.undo_last_move
-        )
-        toolbar.addAction(undo_last_move_action)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
